@@ -1,17 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
-    <title>CloneDetect</title>
-    <link rel="stylesheet" href="styles.css"></link>
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CloneDetect: Duplicate Image Detector</title>
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-    <header>
-        <h1>CloneDetect</h1>
-        <p>CloneDetect is a website that allows you to upload a collection of image files, and seperate any duplicate photos from the collection before redownloading them. </p>
-    </header>
+  <header class="app-header">
+    <h1>CloneDetect</h1>
+    <p class="subtitle">Scan images or folders to detect and remove duplicate photos.</p>
+  </header>
 
+  <main class="container">
+
+    <!-- UPLOAD VIEW-->
+    <section id="uploadView" class="card">
+      <h2>1. Select Images or Folder</h2>
+      <p class="instructions">
+        Please upload at least <strong>2 images</strong> (up to 100 maximum) or an entire folder to scan.
+        <br />
+        <span class="supported-types">
+          Supported formats: JPG, JPEG, PNG, WebP, AVIF, SVG, HEIC, TIFF, BMP, RAW
+        </span>
+      </p>
+      
+      <div class="upload-controls">
+        <label class="file-btn">
+          Select Individual Images
+          <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.avif,.svg,.heic,.tiff,.tif,.bmp,.raw" />
+        </label>
+        <label class="file-btn secondary">
+          Select Entire Folder
+          <input type="file" id="folderInput" webkitdirectory directory multiple />
+        </label>
+      </div>
+      
+      <div id="selectionSummary" class="selection-summary">No files selected yet.</div>
+      <div id="statusMessage" class="status-message hidden"></div>
+      
+      <div class="action-row">
+        <button id="scanBtn" class="primary-btn" disabled>Scan for Duplicates</button>
+        <button id="resetBtn" class="ghost-btn hidden">Clear Selection</button>
+      </div>
+    </section>
+
+    <!-- RESULTS VIEW-->
+    <section id="resultsView" class="card hidden">
+      <h2>2. Duplicate Scan Results</h2>
+      <div id="resultsStats" class="stats-bar"></div>
+      <div id="resultsContainer" class="results-container"></div>
+    </section>
+
+    <!-- DOWNLOAD VIEW-->
+    <section id="downloadView" class="card hidden">
+      <h2>3. Download Cleaned Collection</h2>
+      <p>Download your duplicate-free image package below. Any images checked for removal above will be excluded.</p>
+      <div class="action-row">
+        <button id="downloadBtn" class="primary-btn">Generate &amp; Download Clean ZIP</button>
+        <span id="downloadStatus" class="download-status"></span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Script Stubs -->
+  <script src="/scripts/ImageModel.js"></script>
+  <script src="/scripts/HashModel.js"></script>
+  <script src="/scripts/DuplicateController.js"></script>
+  <script src="/scripts/UploadController.js"></script>
+  <script src="/scripts/DownloadController.js"></script>
 </body>
 </html>
