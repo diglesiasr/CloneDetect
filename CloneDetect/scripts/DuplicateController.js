@@ -23,7 +23,7 @@ function detectDuplicates(Hashes) {
             /* Skip if already done before*/
             if (visited.has(Hashes[j].id)) continue;
 
-            /* Checks hash with HashModel to see if images are identical */
+            /* +Checks hash with HashModel to see if images are identical */
             if (compareHashes(Hashes[i].hash, Hashes[j].hash)) {
                 const dupImg = retrieveImage(Hashes[j].id);
                 /* Marks duplicates */
@@ -45,4 +45,40 @@ function detectDuplicates(Hashes) {
     }
 
     return duplicateGroups;
+}
+
+/**
+ * Called by UploadController:
+ * Clears old data, stores new images in ImageModel, hashes them with HashModel,
+ * and returns scan statistics + duplicate groups for the UI.
+ */
+function processUploadedImages(imageObjects) {
+    /* Wipe any images left over in memory from a previous scan */
+    clearImages();
+
+    /* Array to hold just { id, hash } pairs for fast comparison */
+    const hashes = [];
+
+    /* Loop through every valid image object passed in from UploadController */
+    for (const img of imageObjects) {
+        /* Generate hash using HashModel */
+        const hash = generateHash(img);
+
+        /* Attach the generated hash to the image object and save it in ImageModel */
+        img.hash = hash;
+        storeImage(img);
+
+        /* Record the ID and hash pair to feed into the duplicate detector */
+        hashes.push({ id: img.id, hash: hash });
+    }
+
+    /* Run the comparison loops to group all matching hashes together */
+    const duplicateGroups = detectDuplicates(hashes);
+
+    /* Return the scan summary back to UploadController */
+    return {
+        totalScanned: imageObjects.length,
+        duplicateGroups: duplicateGroups,
+        allImages: retrieveImage()
+    };
 }
