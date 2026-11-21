@@ -1,15 +1,178 @@
+/* CSS for the main HTML */
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    background-color: rgb(44, 84, 44);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-    font-family: Arial, "Segoe UI", sans-serif;
-    line-height: 1.75;
-    padding-bottom: 3rem;
-    color: white;
+  background-color: rgb(44, 84, 44);
+  color: white;
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+  max-width: 850px;
+  margin: 2rem auto;
+  padding: 0 1rem;
 }
 
+header {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 0.75rem;
+}
 
+/* Main Sections */
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.card h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.supported-types {
+  display: block;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 0.25rem;
+}
+
+/* File Inputs and Buttons */
+.upload-controls,
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.85rem 0;
+  align-items: center;
+}
+
+.file-btn,
+button {
+  background: white;
+  color: black;
+  border: 1px solid black;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.file-btn.secondary,
+.ghost-btn {
+  background: transparent;
+  color: white;
+  border: 1px solid white;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.file-btn input[type="file"] {
+  display: none;
+}
+
+/* Status Messages and Stats */
+.status-message {
+  padding: 0.5rem 0.75rem;
+  margin: 0.75rem 0;
+  border: 1px solid white;
+  font-size: 0.9rem;
+}
+
+.status-message.error {
+  background: #7f1d1d;
+  border-color: #fca5a5;
+}
+
+.status-message.warning {
+  background: #78350f;
+  border-color: #fde68a;
+}
+
+.stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 0.9rem;
+}
+
+/* Duplicate Groups */
+.duplicate-group {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.group-header {
+  margin-bottom: 0.65rem;
+  font-size: 0.95rem;
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 0.75rem;
+}
+
+.image-card {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.image-card.marked-remove {
+  border-color: #fca5a5;
+  background: rgba(127, 29, 29, 0.45);
+}
+
+.preview-img {
+  width: 100%;
+  height: 130px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.badge-dup {
+  color: #fecaca;
+}
+
+.img-name {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.img-size,
+.remove-toggle,
+.download-status {
+  font-size: 0.8rem;
+}
+
+.remove-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: auto;
+  cursor: pointer;
+}
+
+/* Hidden class used to hide sections */
+.hidden {
+  display: none !important;
+}
