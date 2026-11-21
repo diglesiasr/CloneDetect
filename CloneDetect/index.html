@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CloneDetect: Duplicate Image Detector</title>
   <link rel="stylesheet" href="styles.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
   <header class="app-header">
@@ -63,11 +64,242 @@
     </section>
   </main>
 
-  <!-- Script Stubs -->
-  <script src="/scripts/ImageModel.js"></script>
-  <script src="/scripts/HashModel.js"></script>
-  <script src="/scripts/DuplicateController.js"></script>
-  <script src="/scripts/UploadController.js"></script>
-  <script src="/scripts/DownloadController.js"></script>
+  <!-- MVC MODELS AND CONTROLLERS -->
+  <script src="scripts/ImageModel.js"></script>
+  <script src="scripts/HashModel.js"></script>
+  <script src="scripts/DuplicateController.js"></script>
+  <script src="scripts/UploadController.js"></script>
+  <script src="scripts/DownloadController.js"></script>
+
+
+
+<!-- UI CONTROLLER (connects the controllers to the html buttons) -->
+  <script>
+    let pendingFiles = [];
+
+    /* Cache elements by their id for faster access */
+    const fileInput = document.getElementById('fileInput');
+    const folderInput = document.getElementById('folderInput');
+    const selectionSummary = document.getElementById('selectionSummary');
+    const statusMessage = document.getElementById('statusMessage');
+    const scanBtn = document.getElementById('scanBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resultsView = document.getElementById('resultsView');
+    const resultsStats = document.getElementById('resultsStats');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const downloadView = document.getElementById('downloadView');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadStatus = document.getElementById('downloadStatus');
+
+    /* Updates UI whenever user selects files or a folder */
+    function handleFileSelection(event) {
+
+      /* Makes the browser's FileList into an array */
+      const newlySelected = Array.from(event.target.files || []);
+      pendingFiles = newlySelected;
+
+      /* Hides and clears previous status messages */
+      statusMessage.className = 'status-message hidden';
+      statusMessage.textContent = '';
+
+      /* Resets the buttons if the user cancels uploading images */
+      if (pendingFiles.length === 0) {
+        selectionSummary.textContent = 'No files selected yet.';
+        scanBtn.disabled = true;
+        resetBtn.classList.add('hidden');
+        return;
+      }
+
+      /* Shows the current queue of files and allows the user to scan or cancel with the buttons */
+      selectionSummary.textContent = `${pendingFiles.length} file(s) queued for scanning.`;
+      scanBtn.disabled = false;
+      resetBtn.classList.remove('hidden');
+    }
+
+    fileInput.addEventListener('change', handleFileSelection);
+    folderInput.addEventListener('change', handleFileSelection);
+
+    /* Resets UI and clears ImageModel */
+    resetBtn.addEventListener('click', () => {
+      pendingFiles = [];
+      fileInput.value = '';
+      folderInput.value = '';
+      selectionSummary.textContent = 'No files selected yet.';
+      statusMessage.className = 'status-message hidden';
+      scanBtn.disabled = true;
+      resetBtn.classList.add('hidden');
+      resultsView.classList.add('hidden');
+      downloadView.classList.add('hidden');
+      clearImages();
+    });
+
+    function showStatus(text, type = 'info') {
+      statusMessage.textContent = text;
+      statusMessage.className = `status-message ${type}`;
+    }
+
+    /* Triggers the UploadController to DuplicateController process */
+    scanBtn.addEventListener('click', async () => {
+      if (pendingFiles.length < 2) {
+        showStatus('Please upload at least two or more images.', 'error');
+        return;
+      }
+
+      /* Prevent the user from pressing the scan button while already scanning */
+      scanBtn.disabled = true;
+      showStatus('Scanning images for duplicates...', 'info');
+
+      try {
+        const response = await uploadImages(pendingFiles);
+
+        /* Response if the user submits an unsupported file within a folder */
+        if (response.unsupportedFiles && response.unsupportedFiles.length > 0) {
+          showStatus(
+            `Unsupported file type excluded: ${response.unsupportedFiles.join(', ')}`,
+            'warning'
+          );
+        } else {
+          statusMessage.className = 'status-message hidden';
+        }
+
+        /* Response if an invalid file was added and this results in too many or too little valid files */
+        if (!response.success) {
+          const errText = response.unsupportedFiles.length > 0
+            ? `File type not supported (${response.unsupportedFiles.join(', ')}). ${response.error}`
+            : response.error;
+          showStatus(errText, 'error');
+          scanBtn.disabled = false;
+          return;
+        }
+
+        /* Render previews of duplicate images in the UI */
+        renderResultsView(response.scanResults);
+        scanBtn.disabled = false;
+      } catch (err) {
+        showStatus(`Error scanning files: ${err.message}`, 'error');
+        scanBtn.disabled = false;
+      }
+    });
+
+    /* Makes the preview thumbnails for duplicates and removal checkboxes to select what to download or keep */
+    function renderResultsView(scanResults) {
+      resultsView.classList.remove('hidden');
+      downloadView.classList.remove('hidden');
+
+      /* Clear previous scan results */
+      resultsContainer.innerHTML = '';
+      downloadStatus.textContent = '';
+
+      /* Calculates the total extra copies from each group */
+      const { totalScanned, duplicateGroups } = scanResults;
+      const totalExtraCopies = duplicateGroups.reduce((acc, group) => acc + (group.length - 1), 0);
+
+      /* Adds the summary of the scan to the HTML */
+      resultsStats.innerHTML = `
+        <span><strong>Total Scanned:</strong> ${totalScanned} images</span>
+        <span><strong>Duplicate Groups Found:</strong> ${duplicateGroups.length}</span>
+        <span><strong>Redundant Copies Identified:</strong> ${totalExtraCopies}</span>
+      `;
+
+      /* Displays when no duplicates are found */
+      if (duplicateGroups.length === 0) {
+        resultsContainer.innerHTML = `
+          <div class="empty-results">
+            No image duplicates found. All ${totalScanned} uploaded images are unique!
+          </div>
+        `;
+        return;
+      }
+
+      /* This section iterates for each group of matches */
+      duplicateGroups.forEach((group, groupIndex) => {
+        const groupNames = group.map(img => img.name).join(', ');
+
+        /* Wrapper for each group of matching images */
+        const groupEl = document.createElement('div');
+        groupEl.className = 'duplicate-group';
+
+        /* Title for each group which includes a number and matching file name */
+        const headerEl = document.createElement('div');
+        headerEl.className = 'group-header';
+        headerEl.innerHTML = `
+          <strong>Duplicate Group #${groupIndex + 1}:</strong>
+          <span>${groupNames}</span>
+        `;
+        groupEl.appendChild(headerEl);
+
+        /* CSS container to display each duplicate photo */
+        const gridEl = document.createElement('div');
+        gridEl.className = 'group-grid';
+        group.forEach((img, idx) => {
+          const card = document.createElement('div');
+          card.className = `image-card ${img.selectedForRemoval ? 'marked-remove' : ''}`;
+
+          const sizeKB = (img.size / 1024).toFixed(1);
+          const badgeText = idx === 0 ? 'Original (Keep)' : 'Duplicate';
+
+          /* Each HTML card comes with a thumbnail and metadata */
+          card.innerHTML = `
+            <div class="badge ${idx === 0 ? 'badge-keep' : 'badge-dup'}">${badgeText}</div>
+            <img src="${img.dataUrl}" alt="${img.name}" class="preview-img" />
+            <div class="img-meta">
+              <div class="img-name" title="${img.name}">${img.name}</div>
+              <div class="img-size">${sizeKB} KB</div>
+            </div>
+            <label class="remove-toggle">
+              <input type="checkbox" data-id="${img.id}" ${img.selectedForRemoval ? 'checked' : ''} />
+              Exclude / Remove Copy
+            </label>
+          `;
+
+          /* Listens if the user checks or unchecks an image to be excluded */
+          const checkbox = card.querySelector('input[type="checkbox"]');
+          checkbox.addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            updateImageSelection(img.id, checked);
+            card.classList.toggle('marked-remove', checked);
+          });
+
+          gridEl.appendChild(card);
+        });
+
+        groupEl.appendChild(gridEl);
+        resultsContainer.appendChild(groupEl);
+      });
+    }
+
+    /* Triggers DownloadController to make and download the final ZIP */
+    downloadBtn.addEventListener('click', async () => {
+      downloadBtn.disabled = true;
+      downloadStatus.textContent = 'Creating ZIP...';
+
+      try {
+        const pkg = await generateDownloadPackage();
+
+        /* Prevents downloading nothing */
+        if (pkg.count === 0) {
+          downloadStatus.textContent = 'You are downloading nothing. Please unselect at least one image.';
+          downloadBtn.disabled = false;
+          return;
+        }
+        
+        /* Creates a download link for the ZIP file */
+        if (pkg.url) {
+          const a = document.createElement('a');
+          a.href = pkg.url;
+          a.download = pkg.filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          downloadStatus.textContent = `Downloaded ${pkg.count} unique image(s) in ${pkg.filename}.`;
+        }
+      } catch (err) {
+        downloadStatus.textContent = `Download error: ${err.message}`;
+      } finally {
+        /* Enables the download button again once packaging is complete */
+        downloadBtn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
